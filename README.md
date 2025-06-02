@@ -1,5 +1,6 @@
- E-Commerce Platform 🌐🛍️
+ MERN E-Commerce Platform 🌐🛍️
 Project Overview
+
 Its an innovative e-commerce platform developed with a feature-rich architecture and a focus on enhancing the user experience. Leveraging the MVC pattern, this project ensures streamlined code organization and improved project structure.
 
 Key Features
