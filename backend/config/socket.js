@@ -1,6 +1,6 @@
 import jwt  from "jsonwebtoken";
 import { Server } from "socket.io";
-import messageModel from "../models/messageModel";
+import messageModel from "../models/messageModel.js";
 
 let io;
 
@@ -22,29 +22,42 @@ const setupSocket = (server) => {
       return next( new Error("Authentcation Error: Invalid Token"));
     }
   })
+  
   const userSocketMap = {}
+  const agentSocketMap = {}
+
   io.on("connection", socket => {
     console.log("User connected:", socket.id, socket.user);
-    const userId = socket.user.id;
-    userSocketMap[userId] = socket.id;
-    console.log(`user connected: ${userId}`);
-   
-    
+    const {role, _id:userId} = socket.user._id;
+    const agentId = process.env.admin_id;
+    userId ? userSocketMap[userId] = socket.id : agentSocketMap[agentId] = socket.id;
+    console.log(`${role ? role : 'agent'} connected`);
     socket.on("join room", () => {
       const roomId = `room-${userId}`
-      socket.emit("joined room",roomId); // broadcast to user
+      socket.emit("joined room",roomId); // joined one-on-one room
     });
-    socket.on('send message',async({ roomId, message , toUserId })=>{
+    socket.on('send-message-to-agent',async({ roomId, message })=>{
+      io.to(roomId).emit('recieve-message-from-user',{fromUserId:userId,message})
       const newMessage = new messageModel({
-        formUserId : userId,
-        toUSerId : toUserId,
+        fromUserId : userId,
+        toUSerId : agentId,
+        message : message
+      })
+      await newMessage.save();
+    })
+    socket.on('send-message-to-user',async({roomId , message})=>{
+      io.to(roomId).emit('recive-message-from-agent',{agentId, message});
+      const newMessage = new messageModel({
+        fromUserId : userId,
+        toUSerId : agentId,
         message : message
       })
       await newMessage.save();
     })
 
     socket.on("disconnect", () => {
-      console.log("User disconnected:", socket.id);
+      role === 'user' ? delete userSocketMap[userId] : agentSocketMap[agentId];
+      console.log(`${role=== 'user' ? 'user' : 'agent'} disconnected:`);
     });
   });
 };
