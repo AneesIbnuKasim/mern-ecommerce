@@ -41,6 +41,10 @@ function Navbar() {
             <p>Contacts</p>
             <hr className="w-2/4 h-[2px] border-none bg-black hidden" />
           </NavLink>
+          <NavLink to="/help" className="flex flex-col items-center gap-1 ">
+            <p>Help</p>
+            <hr className="w-2/4 h-[2px] border-none bg-black hidden" />
+          </NavLink>
         </li>
       </ul>
       {/* -------------search-icon--------------------- */}

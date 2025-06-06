@@ -12,6 +12,7 @@ function Product() {
   const [image, setImage] = useState("");
   const [size, setSize] = useState("");
   const [review,setReview] = useState(false);
+  
 
   const fetchProductData = async () => {
     await products.find((item) => {
@@ -94,7 +95,8 @@ function Product() {
               ))}
             </div>
           </div>
-          <button onClick={()=>addToCart(productData._id,size)} className="border bg-black text-white py-2 px-3 rounded-xl active:bg-gray-700">
+          {/* -------------add product to cart--------------- */}
+          <button onClick={ ()=>addToCart(productData._id,size)} className="border bg-black text-white py-2 px-3 rounded-xl active:bg-gray-700">
             Add To Cart
           </button>
           <hr className="my-4 lg:my-8 bg-gray-300 h-0.5" />
@@ -120,9 +122,7 @@ function Product() {
             <p className="text-md text-gray-700">
             An e-commerce website is an online platform that facilitates the
             buying and selling of products or services over the internet. It
-            serves as a virtual marketplace where businesses and individuals can
-            showcase their products, interact with customers, and conduct
-            transactions without the need for a physical presence. E-commerce
+            serves as a virtual marketplace where businesses and individuals can physical presence. E-commerce
             websites have gained immense popularity due to their convenience,
             accessibility, and the global reach they offer.
           </p>
