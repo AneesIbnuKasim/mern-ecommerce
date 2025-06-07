@@ -5,8 +5,8 @@ import bcrypt, { genSalt } from "bcrypt";
 import jwt from "jsonwebtoken";
 
 //create jwt token
-const createToken = (user_id) => {
-  return jwt.sign({ user_id }, process.env.jwt_secret);
+const createToken = (user_id, role) => {
+  return jwt.sign({ user_id, role }, process.env.jwt_secret);
 };
 
 //Route for user login
@@ -20,7 +20,7 @@ const loginUser = async (req, res) => {
     //checking if passwords match
     const isMatch = await bcrypt.compare(password, user.password);
     if (isMatch) {
-      const token = createToken(user._id);
+      const token = createToken(user._id, user.role);
       res.json({ success: true, token, message:"Successfully logged in" });
     } else {
       res.json({ success: false, message: "Invalid credentials" });

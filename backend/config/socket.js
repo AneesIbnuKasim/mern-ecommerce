@@ -7,7 +7,7 @@ let io;
 const setupSocket = (server) => {
   io = new Server(server, {
     cors: {
-      origin: "http://localhost:3000", // frontend URL
+      origin: "http://localhost:5173", // frontend and admin URL
       methods: ["GET", "POST"],
     }, 
   });
@@ -16,6 +16,8 @@ const setupSocket = (server) => {
     if (!token) return next( new Error("Authentciation Error: You are not logged in"));
     try {
       const user = jwt.verify(token,process.env.jwt_secret);
+      console.log('firstuser',user);
+      
       socket.user = user;
       next();
     } catch (error) {
@@ -28,7 +30,10 @@ const setupSocket = (server) => {
 
   io.on("connection", socket => {
     console.log("User connected:", socket.id, socket.user);
-    const {role, _id:userId} = socket.user._id;
+    console.log('socketuser',socket.user);
+    const userId = 3;
+    const role = 'user'
+    // const {role, _id:userId} = socket.user.user_id;
     const agentId = process.env.admin_id;
     userId ? userSocketMap[userId] = socket.id : agentSocketMap[agentId] = socket.id;
     console.log(`${role ? role : 'agent'} connected`);

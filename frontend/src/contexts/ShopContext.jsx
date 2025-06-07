@@ -133,7 +133,7 @@ function ShopContextProvider({ children }) {
 
   useEffect(()=>{
       getProductData();
-  },[products])
+  },[])
 
   useEffect(()=>{
     if(!token && localStorage.getItem('token')) {

@@ -1,13 +1,32 @@
 import React, { useEffect, useRef, useState } from 'react';
+import io from 'socket.io-client'
+
+const socket = io('http://localhost:3001', {
+  auth: {
+    token: localStorage.getItem('token') //send jwt for auth verification
+  }
+});
 
 const Chat = () => {
   const [isOpen, setIsOpen] = useState(false);
   const [message, setMessage] = useState('');
   const [messages, setMessages] = useState([]);
+  const [roomId, setRoomId] = useState('')
   const bottomRef = useRef(null)
    let botRun = useRef(false);
 
-  const toggleChat = () => setIsOpen(!isOpen);
+  const toggleChat = () =>{
+     socket.emit('join-room')
+     socket.on('joined-room',(roomId)=>{
+      setRoomId(roomId);
+      console.log('roomid',roomId);
+      
+     })
+     setIsOpen(!isOpen);
+  }
+    useEffect(()=>{
+    bottomRef.current?.scrollIntoView({behavior:'auto'})
+  },[messages,toggleChat])
 
   const sendMessage = () => {
     if (!message.trim()) return;
@@ -22,9 +41,6 @@ const Chat = () => {
     }, 1000);
     }
   };
-  useEffect(()=>{
-    bottomRef.current?.scrollIntoView({behavior:'auto'})
-  },[messages,toggleChat])
 
   return (
     <div>

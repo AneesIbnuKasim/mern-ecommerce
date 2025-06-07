@@ -37,7 +37,6 @@ function AllCollections() {
     }
     // filter-products-category
     if (category.length > 0) {
-      console.log(category);
       productsCopy = productsCopy.filter((item) =>
         category.includes(item.category)
       );
@@ -45,9 +44,6 @@ function AllCollections() {
     
     // filter-products-subCategory
     if (subCategory.length > 0) {
-      console.log(subCategory.length);
-      
-      console.log(subCategory);
       productsCopy = productsCopy.filter((item) =>
         subCategory.includes(item.subCategory)
       );
