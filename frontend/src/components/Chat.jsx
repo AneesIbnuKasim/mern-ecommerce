@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import axios from "axios";
 import io from "socket.io-client";
-import {jwtDecode} from "jwt-decode";
+import { jwtDecode } from "jwt-decode";
 
 const socket = io("http://localhost:3001", {
   auth: {
@@ -14,33 +14,49 @@ const Chat = () => {
   const [isOpen, setIsOpen] = useState(false);
   const [message, setMessage] = useState("");
   const [messages, setMessages] = useState([]);
+  const [isTyping, setIsTyping] = useState(false);
+  const [selectedAdmin, setSelectedAdmin] = useState("");
+  const [typingName, setTypingName] = useState("Anees");
   const [roomId, setRoomId] = useState("");
   const bottomRef = useRef(null);
+  const nameRef = useRef("");
+  const typingTimeoutRef = useRef(null);
+  const selectedAdminRef = useRef("");
   let botRun = useRef(false);
   let userId;
+
+  //Updates ref for selectedAdmin change
+  useEffect(() => {
+    selectedAdminRef.current = selectedAdmin;
+  }, [selectedAdmin]);
+
   //set userId from jwt
   const token = localStorage.getItem("token");
-if (token) {
-  const decoded = jwtDecode(token);
-  userId = decoded.user_id;
-  console.log('jwt userId',userId);
-}
-  
+  if (token) {
+    const decoded = jwtDecode(token);
+    console.log("decodeeeed", decoded);
+
+    userId = decoded.user_id;
+    nameRef.current = decoded.name;
+    console.log("jwt userId", userId);
+  }
 
   //recieve messages
   useEffect(() => {
-    socket.on("receive-message-from-admin", ({ fromUserId, toUserId, roomId, message }) => {
-      console.log('admin msg hit',fromUserId);
-      
-      setMessages((prev) => [...prev, {fromUserId:fromUserId,message}]);
+    socket.on("receive-message-from-admin", ({ fromUserId, message }) => {
+      setSelectedAdmin(fromUserId);
+      setMessages((prev) => [...prev, { fromUserId: fromUserId, message }]);
     });
-
-    socket.on("userTyping", ({ userId }) => {
-      if (userId) setIsTyping(true);
+    //listen for typing notifications
+    socket.on("userTyping", ({ userId, name }) => {
+      console.log("typing log", userId);
+      console.log("ref log", selectedAdminRef.current);
+      setTypingName(name);
+      if (userId === selectedAdminRef.current) setIsTyping(true);
     });
-
-    socket.on("userStoppedTyping", ({ userId }) => {
-      if (userId) setIsTyping(false);
+    //listen for StopTyping notifications
+    socket.on("userStoppedTyping", (userId) => {
+      if (userId === selectedAdminRef.current) setIsTyping(false);
     });
 
     return () => {
@@ -50,15 +66,11 @@ if (token) {
       socket.off("userStoppedTyping");
     };
   }, []);
+
   //Toggle chat and recieving roomId from backend
   const toggleChat = () => {
-    socket.emit("join-room",userId);
+    socket.emit("join-room", userId);
     socket.on("joined-room", (roomId) => {
-      console.log("user join in room:", roomId);
-      console.log(
-        "Fetching messages from:",
-        `${backendUrl}/api/messages/${roomId}`
-      );
       axios
         .get(`${backendUrl}/api/messages/${roomId}`)
         .then((res) => setMessages(res.data))
@@ -73,6 +85,32 @@ if (token) {
     bottomRef.current?.scrollIntoView({ behavior: "auto" });
   }, [messages, toggleChat]);
 
+  //clear message on close button
+  const handleClose = async () => {
+    try {
+      console.log(
+        "Fetching messages from:",
+        `${backendUrl}/api/messages/deleteChat/${roomId}`
+      );
+      await axios.post(`${backendUrl}/api/messages/deleteChat/${roomId}`);
+    } catch (error) {
+      console.log(error);
+    }
+  };
+
+  // typing... notification
+  const handleTyping = (e) => {
+    setMessage(e.target.value);
+    console.log("nameRef:", nameRef.current);
+
+    socket.emit("typing", { roomId, userId, name: nameRef.current });
+
+    if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
+    typingTimeoutRef.current = setTimeout(() => {
+      socket.emit("stopTyping", { roomId, userId });
+    }, 1000);
+  };
+
   //send message to admin
   const sendMessage = () => {
     if (!message.trim()) return;
@@ -81,9 +119,8 @@ if (token) {
       fromUserId: userId,
       message,
     };
-    console.log('send msg to admin',msg);
-    
-    socket.emit("send-message-to-admin", msg );
+
+    socket.emit("send-message-to-admin", msg);
     setMessages([...messages, { fromUserId: userId, message }]);
     setMessage("");
 
@@ -98,97 +135,69 @@ if (token) {
       }, 1000);
     }
   };
+  console.log("is typing", isTyping);
 
   return (
     <div>
       {/* Floating button */}
       <button
         onClick={toggleChat}
-        style={{
-          position: "fixed",
-          bottom: "20px",
-          right: "20px",
-          backgroundColor: "#0f62fe",
-          color: "white",
-          borderRadius: "50%",
-          width: "60px",
-          height: "60px",
-          fontSize: "24px",
-          border: "none",
-          cursor: "pointer",
-          zIndex: 1000,
-        }}
+        className="fixed bottom-5 w-[60px] h-[60px] right-5 bg-blue-600 rounded-full text-2xl border-none cursor-pointer z-[1000]"
       >
         💬
       </button>
 
       {/* Popup Chat Box */}
       {isOpen && (
-        <div
-          style={{
-            position: "fixed",
-            bottom: "90px",
-            right: "20px",
-            width: "300px",
-            height: "400px",
-            backgroundColor: "white",
-            border: "1px solid #ccc",
-            borderRadius: "10px",
-            display: "flex",
-            flexDirection: "column",
-            justifyContent: "space-between",
-            zIndex: 1000,
-          }}
-        >
-          <div style={{ padding: "10px", borderBottom: "1px solid #eee" }}>
+        <div className="fixed bottom-[90px] right-5 w-[300px] h-[400px] bg-[#f2f2f2] border border-[#ccc] rounded-[10px] flex flex-col justify-between z-[1000]">
+          <div className="p-[10px] border-b border-gray-200">
             <strong>Help Chat</strong>
             <button
-              onClick={toggleChat}
-              style={{ float: "right", border: "none", background: "none" }}
+              onClick={() => {
+                toggleChat();
+                handleClose();
+              }}
+              className="float-right border-none bg-none"
             >
               ✖
             </button>
           </div>
 
-          <div style={{ flex: 1, padding: "10px", overflowY: "auto" }}>
-            {messages.map((msg, idx) => (
-              <div
-                key={idx}
-                style={{ textAlign: msg.fromUserId === userId ? "right" : "left" }}
-              >
-                <div
-                  style={{
-                    display: "inline-block",
-                    backgroundColor:
-                      msg.fromUserId === userId ? "#dcf8c6" : "#f1f0f0",
-                    borderRadius: "10px",
-                    padding: "5px 10px",
-                    margin: "5px 0",
-                  }}
+          <div className="flex-1 p-[10px] overflow-y-auto flex flex-col hide-scrollbar">
+            <div className="flex flex-col gap-2 flex-grow">
+              {messages.map((msg, idx) => (
+                <div key={idx}
+                  className={`inline-block rounded-[10px] px-[10px] py-[5px] my-[5px]
+                  ${
+                    msg.fromUserId === userId ? "text-right" : "text-left"
+                  }`}
                 >
-                  {msg.message}
+                  <span className={`${msg.fromUserId === userId ? "bg-[#dcf8c6]" : "bg-[#f1f0f0]"} p-3 rounded-[20px]`}>{msg.message}</span>
                 </div>
+              ))}
+            </div>
+            {/* ---------------Typing notifications*---------------*/}
+            {isTyping && (
+              <div className="text-sm text-gray-500 italic mt-2">
+                {typingName} is typing...
               </div>
-            ))}
+            )}
+
             <div ref={bottomRef} />
           </div>
 
-          <div style={{ display: "flex", borderTop: "1px solid #eee" }}>
+          <div className="flex mt-[1rem]">
             <input
               type="text"
               value={message}
-              onChange={(e) => setMessage(e.target.value)}
-              style={{ flex: 1, border: "none", padding: "10px" }}
+              onChange={handleTyping}
+              onKeyDown={(e) => e.key === "Enter" && sendMessage()}
+              className="flex-1 p-2 border border-gray-400 rounded-lg"
               placeholder="Type your message"
             />
             <button
               onClick={sendMessage}
-              style={{
-                border: "none",
-                background: "#0f62fe",
-                color: "white",
-                padding: "10px",
-              }}
+              className="border-none rounded-lg bg-blue-600 ml-1 text-white px-4 py-2"
             >
               Send
             </button>

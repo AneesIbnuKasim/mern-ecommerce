@@ -81,12 +81,16 @@ const setupSocket = (server) => {
         await msg.save();
       }
     );
-    socket.on("typing", ({ roomId, userId }) => {
-      socket.to(roomId).emit("userTyping", { userId });
+    socket.on("typing", ({ roomId, userId, name }) => {
+      console.log(`[TYPING] ${name} typing in room ${roomId}`);
+      
+      socket.to(roomId).emit("userTyping", { userId, name });
     });
 
     socket.on("stopTyping", ({ roomId, userId }) => {
-      socket.to(roomId).emit("userStoppedTyping", { userId });
+     console.log("Received stopTyping for", userId, "Current selection:");
+      
+      socket.to(roomId).emit("userStoppedTyping", userId);
     });
 
     socket.on("disconnect", () => {

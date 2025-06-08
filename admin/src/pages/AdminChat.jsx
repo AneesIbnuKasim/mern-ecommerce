@@ -10,28 +10,41 @@ const socket = io("http://localhost:3001", {
 }); // backend URL
 
 const AdminChat = () => {
-  const [selectedUser, setSelectedUser] = useState(null);
+  const [selectedUser, setSelectedUser] = useState("");
   const [roomId, setRoomId] = useState("");
   const [message, setMessage] = useState("");
   const [messages, setMessages] = useState([]);
   const [users, setUsers] = useState([]);
   const [isTyping, setIsTyping] = useState(false);
+  const [typingName, setTypingName] = useState("");
+  const messagesContainerRef = useRef(null);
+  const selectedUserRef = useRef("");
 
   const typingTimeoutRef = useRef(null);
-  const adminId = import.meta.env.admin_id;
+  const adminId = import.meta.env.VITE_ADMIN_ID;
 
-  // Join room and fetch history when user selected
+  // Live Updating slectedUserRef.current when selectedUser change
   useEffect(() => {
-    if (!selectedUser) return;
+    selectedUserRef.current = selectedUser;
   }, [selectedUser]);
+
+  //scroll to latetst message
+  useEffect(() => {
+    if (messagesContainerRef.current) {
+      messagesContainerRef.current.scrollTo({
+        top: messagesContainerRef.current.scrollHeight,
+        behavior: "auto",
+      });
+    }
+  }, [messages]);
 
   //fetch users
   useEffect(() => {
     axios
       .get(backendUrl + "/api/messages/users")
       .then((res) => {
-        console.log("users admin:", res);
-        setUsers(res.data);
+        console.log("users admin:", res.data.users);
+        setUsers(res.data.users);
       })
       .catch((err) => {
         console.error(err);
@@ -40,20 +53,21 @@ const AdminChat = () => {
 
   // Receive messages
   useEffect(() => {
-    socket.on("receive-message-from-user", ({fromUserId, message}) => {
-      console.log("FROM USER ID:", fromUserId);
-      setMessages((prev) => [...prev, {fromUserId:fromUserId, message}]);
+    socket.on("receive-message-from-user", ({ fromUserId, message }) => {
+      setMessages((prev) => [...prev, { fromUserId: fromUserId, message }]);
       setUsers((prev) =>
         prev.includes(fromUserId) ? prev : [...prev, fromUserId]
       );
     });
 
-    socket.on("userTyping", ({ userId }) => {
-      if (userId === selectedUser) setIsTyping(true);
+    socket.on("userTyping", ({ userId, name }) => {
+      console.log("admin side, userId", userId, selectedUser);
+      setTypingName(name);
+      if (userId === selectedUserRef.current) setIsTyping(true);
     });
 
-    socket.on("userStoppedTyping", ({ userId }) => {
-      if (userId === selectedUser) setIsTyping(false);
+    socket.on("userStoppedTyping", (userId) => {
+      if (userId === selectedUserRef.current) setIsTyping(false);
     });
 
     return () => {
@@ -67,7 +81,7 @@ const AdminChat = () => {
   const handleJoin = (userId) => {
     setSelectedUser(userId);
 
-    socket.emit("join-room",userId);
+    socket.emit("join-room", userId);
     socket.on("joined-room", (roomId) => {
       setRoomId(roomId);
       console.log("adminroom", roomId);
@@ -93,9 +107,9 @@ const AdminChat = () => {
       message,
     };
     socket.emit("send-message-to-user", msg);
-    console.log('admin sended msg',msg);
-    
-    setMessages(prev=>[...prev,{fromUserId:adminId, message}])
+    console.log("admin sended msg", msg);
+
+    setMessages((prev) => [...prev, { fromUserId: adminId, message }]);
     setMessage("");
     socket.emit("stopTyping", { roomId, userId: adminId });
   };
@@ -103,7 +117,7 @@ const AdminChat = () => {
   // typing... notification
   const handleTyping = (e) => {
     setMessage(e.target.value);
-    socket.emit("typing", { roomId, userId: adminId });
+    socket.emit("typing", { roomId, userId: adminId, name: "admin" });
 
     if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
     typingTimeoutRef.current = setTimeout(() => {
@@ -112,7 +126,7 @@ const AdminChat = () => {
   };
 
   return (
-    <div style={{ display: "flex", height: "100vh" }}>
+    <div className="flex h-[70vh]">
       {/* Users List */}
       <div className="w-[200px] border-r border-gray-300 p-4">
         <h3 className="border text-white bg-black text-center">Users</h3>
@@ -122,52 +136,45 @@ const AdminChat = () => {
             className={`cursor-pointer font-bold text-center mb-[10px] ${
               selectedUser === user ? "font-bold" : "font-normal"
             }`}
-            onClick={() => handleJoin(user)}
+            onClick={() => handleJoin(user._id)}
           >
-            {user}
+            {user.name}
           </div>
         ))}
       </div>
 
       {/* Chat Box */}
-      <div
-        style={{
-          flex: 1,
-          padding: "1rem",
-          display: "flex",
-          flexDirection: "column",
-          height: "70vh",
-        }}
-      >
+      <div className="flex-1 p-4 flex flex-col h-[70vh]">
         <h3>Chat with: {selectedUser || "Select a user"}</h3>
         <div
-          style={{
-            flex: 1,
-            overflowY: "auto",
-            border: "1px solid #ccc",
-            padding: "1rem",
-          }}
+          ref={messagesContainerRef}
+          className="flex-1 overflow-y-auto border border-gray-300 p-4 flex flex-col"
         >
-          {messages.map((msg) => (
-            <div
-              key={msg.messageId}
-              className={`mb-2 ${
-                msg.fromUserId === adminId ? "text-right" : "text-left"
-              }`}
-            >
-              <span>{msg.message}</span>
-            </div>
-          ))}
+          {/* Message List */}
+          <div className="flex flex-col gap-2 flex-grow">
+            {messages.map((msg, id) => (
+              <div
+                key={id}
+                className={`inline-block rounded-[10px] px-[10px] py-[5px] my-[5px] break-words ${
+                  msg.fromUserId === adminId ? "text-right" : "text-left"
+                } `}
+              >
+                <span className={`${msg.fromUserId === adminId ? "bg-[#dcf8c6]" : "bg-[#f1f0f0]"} p-3 rounded-[20px]`}>{msg.message}</span>
+              </div>
+            ))}
+          </div>
+
+          {/* Typing Indicator */}
           {isTyping && (
-            <p>
-              <em>{selectedUser} is typing...</em>
-            </p>
+            <div className="text-sm text-gray-500 italic mt-2">
+              {typingName} is typing...
+            </div>
           )}
         </div>
 
         {/* Input Box */}
         {selectedUser && (
-          <div style={{ marginTop: "1rem", display: "flex" }}>
+          <div className="flex mt-[1rem]">
             <input
               type="text"
               value={message}
