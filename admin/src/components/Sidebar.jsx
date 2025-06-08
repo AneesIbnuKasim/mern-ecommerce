@@ -15,9 +15,13 @@ function Sidebar() {
                 <img className='w-5 h-5' src={assets.order_icon} alt="add-icon" />
                 <p className='hidden md:block'>List Items</p>
             </NavLink>
-            <NavLink to="orders" className='flex gap-3 items-center border border-gray-300 brder-r-0 px-3 py-2 rounded-1 '>
+            <NavLink to="/orders" className='flex gap-3 items-center border border-gray-300 brder-r-0 px-3 py-2 rounded-1 '>
                 <img className='w-5 h-5' src={assets.parcel_icon} alt="add-icon" />
                 <p className='hidden md:block'>Orders</p>
+            </NavLink>
+            <NavLink to="/messages" className='flex gap-3 items-center border border-gray-300 brder-r-0 px-3 py-2 rounded-1 '>
+                <img className='w-5 h-5' src={assets.parcel_icon} alt="add-icon" />
+                <p className='hidden md:block'>Messages</p>
             </NavLink>
         </div>
 

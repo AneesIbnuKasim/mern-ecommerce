@@ -1,70 +1,101 @@
-import jwt  from "jsonwebtoken";
+import jwt from "jsonwebtoken";
 import { Server } from "socket.io";
 import messageModel from "../models/messageModel.js";
+import { v4 as uuidv4 } from "uuid";
 
 let io;
 
 const setupSocket = (server) => {
   io = new Server(server, {
     cors: {
-      origin: "http://localhost:5173", // frontend and admin URL
+      origin: [
+        "http://localhost:5173", // user chat
+        "http://localhost:5174", // admin chat
+      ],
       methods: ["GET", "POST"],
-    }, 
+    },
   });
-  io.use((socket, next)=>{
+  io.use((socket, next) => {
     const token = socket.handshake.auth?.token;
-    if (!token) return next( new Error("Authentciation Error: You are not logged in"));
+    if (!token)
+      return next(new Error("Authentciation Error: You are not logged in"));
     try {
-      const user = jwt.verify(token,process.env.jwt_secret);
-      console.log('firstuser',user);
-      
+      const user = jwt.verify(token, process.env.jwt_secret);
       socket.user = user;
       next();
     } catch (error) {
-      return next( new Error("Authentcation Error: Invalid Token"));
+      return next(new Error("Authentcation Error: Invalid Token"));
     }
-  })
-  
-  const userSocketMap = {}
-  const agentSocketMap = {}
+  });
 
-  io.on("connection", socket => {
-    console.log("User connected:", socket.id, socket.user);
-    console.log('socketuser',socket.user);
-    const userId = 3;
-    const role = 'user'
-    // const {role, _id:userId} = socket.user.user_id;
-    const agentId = process.env.admin_id;
-    userId ? userSocketMap[userId] = socket.id : agentSocketMap[agentId] = socket.id;
-    console.log(`${role ? role : 'agent'} connected`);
-    socket.on("join room", () => {
-      const roomId = `room-${userId}`
-      socket.emit("joined room",roomId); // joined one-on-one room
+  const userSocketMap = {};
+  const agentSocketMap = {};
+  //listen for new user connections
+  io.on("connection", (socket) => {
+    const { role, user_id: userId } = socket.user;
+    const adminId = process.env.admin_id;
+    
+    //user id -> socket.id mapping and agent.id -> socket.id mapping
+    userId
+      ? (userSocketMap[userId] = socket.id)
+      : (agentSocketMap[adminId] = socket.id);
+
+    console.log(`${role ? role : "agent"} connected`);
+    socket.on("join-room", (userId) => {
+      console.log('user id',userId);
+      console.log(userSocketMap);
+      
+      
+      const roomId = [adminId, userId].sort().join("-");
+
+      socket.join(roomId);
+      console.log(`${ role ? role : 'admin' } joined on room`, roomId);
+      socket.emit("joined-room", roomId); // joined one-on-one room
     });
-    socket.on('send-message-to-agent',async({ roomId, message })=>{
-      io.to(roomId).emit('recieve-message-from-user',{fromUserId:userId,message})
-      const newMessage = new messageModel({
-        fromUserId : userId,
-        toUSerId : agentId,
-        message : message
-      })
-      await newMessage.save();
-    })
-    socket.on('send-message-to-user',async({roomId , message})=>{
-      io.to(roomId).emit('recive-message-from-agent',{agentId, message});
-      const newMessage = new messageModel({
-        fromUserId : userId,
-        toUSerId : agentId,
-        message : message
-      })
-      await newMessage.save();
-    })
+    socket.on("send-message-to-admin", async ({ roomId, message }) => {
+      console.log(`for user ${userId}`,message);
+      
+      const msg = new messageModel({
+        messageId: uuidv4(),
+        roomId,
+        fromUserId: userId,
+        toUserId: adminId,
+        message,
+      });
+      io.to(roomId).emit("receive-message-from-user", msg);
+      await msg.save();
+    });
+    socket.on(
+      "send-message-to-user",
+      async ({ roomId, fromUserId, toUserId, message }) => {
+        const msg = new messageModel({
+          messageId: uuidv4(),
+          roomId,
+          fromUserId,
+          toUserId,
+          message,
+        });
+        console.log('rooooom id',roomId);
+        
+        io.to(roomId).emit("receive-message-from-admin", msg);
+        await msg.save();
+      }
+    );
+    socket.on("typing", ({ roomId, userId }) => {
+      socket.to(roomId).emit("userTyping", { userId });
+    });
+
+    socket.on("stopTyping", ({ roomId, userId }) => {
+      socket.to(roomId).emit("userStoppedTyping", { userId });
+    });
 
     socket.on("disconnect", () => {
-      role === 'user' ? delete userSocketMap[userId] : agentSocketMap[agentId];
-      console.log(`${role=== 'user' ? 'user' : 'agent'} disconnected:`);
+      role === "user"
+        ? delete userSocketMap[userId]
+        : delete agentSocketMap[adminId];
+      console.log(`${role === "user" ? "user" : "agent"} disconnected:`);
     });
   });
 };
 
-export default setupSocket
+export default setupSocket;

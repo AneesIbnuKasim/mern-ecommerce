@@ -9,7 +9,7 @@ import cartRouter from "./routes/cartRoute.js"
 import orderRouter from "./routes/orderRoute.js"
 import  http  from 'http'
 import setupSocket from "./config/socket.js"
-
+import chatRouter from "./routes/chatRoute.js";
 
 //app config
 const app = express()
@@ -27,10 +27,42 @@ app.use(cors())
 
 
 //api endpoints
+
+// app.use((req, res, next) => {
+//   console.log(`Incoming request: ${req.method} ${req.originalUrl}`);
+//   next();
+// });
+
 app.use('/api/user',userRouter);
+
+// app.use((req, res, next) => {
+//   console.log(`Incoming request: ${req.method} ${req.originalUrl}`);
+//   next();
+// });
+
 app.use('/api/product',productRouter);
+
+// app.use((req, res, next) => {
+//   console.log(`Incoming request: ${req.method} ${req.originalUrl}`);
+//   next();
+// });
+
+
 app.use('/api/cart',cartRouter);
+
+// app.use((req, res, next) => {
+//   console.log(`Incoming request: ${req.method} ${req.originalUrl}`);
+//   next();
+// });
+
 app.use('/api/order',orderRouter)
+
+// app.use((req, res, next) => {
+//   console.log(`Incoming request: ${req.method} ${req.originalUrl}`);
+//   next();
+// });
+
+app.use('/api/messages', chatRouter);
 
 app.get('/',(req,res)=>{
     res.send("API working")

@@ -64,7 +64,7 @@ const registerUser = async (req, res) => {
       password: hashedPassword,
     });
     const user = await newUser.save();
-    const token = createToken(user._id);
+    const token = createToken(user._id, user.role);
 
     res.json({ success: true, token });
   } catch (error) {
@@ -77,7 +77,6 @@ const registerUser = async (req, res) => {
 const adminLogin = async (req, res) => {
   try {
     const {email,password} = req.body;
-    console.log('hre');
     if(email === process.env.ADMIN_EMAIL) {
       if(password === process.env.ADMIN_PASSWORD) {
         const token = jwt.sign(email+password,process.env.jwt_secret);
