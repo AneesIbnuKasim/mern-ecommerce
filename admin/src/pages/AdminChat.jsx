@@ -3,7 +3,7 @@ import { backendUrl } from "../App";
 import io from "socket.io-client";
 import axios from "axios";
 
-const socket = io("http://localhost:3001", {
+const socket = io("https://ecommerce-backend-4pcs.onrender.com", {
   auth: {
     token: localStorage.getItem("token"),
   },

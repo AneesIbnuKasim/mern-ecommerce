@@ -3,7 +3,7 @@ import axios from "axios";
 import io from "socket.io-client";
 import { jwtDecode } from "jwt-decode";
 import { toast } from "react-toastify"
-const socket = io("http://localhost:3001", {
+const socket = io("https://ecommerce-backend-4pcs.onrender.com", {
   auth: {
     token : localStorage.getItem("token"), //send jwt for auth verification
   },
