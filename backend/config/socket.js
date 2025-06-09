@@ -9,8 +9,8 @@ const setupSocket = (server) => {
   io = new Server(server, {
     cors: {
       origin: [
-        "ecommerce-frontend-murex-two.vercel.app",                // User FE
-        "mern-ecommerce-admin-beta.vercel.app",                                  // Admin chat
+        "https://ecommerce-frontend-murex-two.vercel.app",                // User FE
+        "https://mern-ecommerce-admin-beta.vercel.app",                  // Admin FE
       ], 
       methods: ["GET", "POST"],
     },
