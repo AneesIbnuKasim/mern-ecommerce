@@ -60,7 +60,6 @@ const AdminChat = () => {
     });
 
     socket.on("userTyping", ({ userId, name }) => {
-      console.log("admin side, userId", userId, selectedUser);
       setTypingName(name);
       if (userId === selectedUserRef.current) setIsTyping(true);
     });
@@ -83,11 +82,6 @@ const AdminChat = () => {
     socket.emit("join-room", userId);
     socket.on("joined-room", (roomId) => {
       setRoomId(roomId);
-      console.log("adminroom", roomId);
-      console.log(
-        "Fetching messages from:",
-        `${backendUrl}/api/messages/${roomId}`
-      );
       // Load message history
       axios
         .get(`${backendUrl}/api/messages/${roomId}`)
@@ -106,8 +100,6 @@ const AdminChat = () => {
       message,
     };
     socket.emit("send-message-to-user", msg);
-    console.log("admin sended msg", msg);
-
     setMessages((prev) => [...prev, { fromUserId: adminId, message }]);
     setMessage("");
     socket.emit("stopTyping", { roomId, userId: adminId });

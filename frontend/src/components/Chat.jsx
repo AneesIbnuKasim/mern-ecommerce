@@ -34,11 +34,8 @@ const Chat = () => {
   const token = localStorage.getItem("token");
   if (token) {
     const decoded = jwtDecode(token);
-    console.log("decodeeeed", decoded);
-
     userId = decoded.user_id;
     nameRef.current = decoded.name;
-    console.log("jwt userId", userId);
   }
 
   //recieve messages
@@ -51,8 +48,6 @@ const Chat = () => {
     });
     //listen for typing notifications
     socket.on("userTyping", ({ userId, name }) => {
-      console.log("typing log", userId);
-      console.log("ref log", selectedAdminRef.current);
       setTypingName(name);
       if (userId === selectedAdminRef.current) setIsTyping(true);
     });
@@ -90,10 +85,6 @@ const Chat = () => {
   //clear message on close button
   const handleClose = async () => {
     try {
-      console.log(
-        "Fetching messages from:",
-        `${backendUrl}/api/messages/deleteChat/${roomId}`
-      );
       await axios.post(`${backendUrl}/api/messages/deleteChat/${roomId}`);
     } catch (error) {
       console.log(error);
@@ -103,10 +94,7 @@ const Chat = () => {
   // typing... notification
   const handleTyping = (e) => {
     setMessage(e.target.value);
-    console.log("nameRef:", nameRef.current);
-
     socket.emit("typing", { roomId, userId, name: nameRef.current });
-
     if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
     typingTimeoutRef.current = setTimeout(() => {
       socket.emit("stopTyping", { roomId, userId });
@@ -116,11 +104,12 @@ const Chat = () => {
   //send message to admin
   const sendMessage = () => {
     if (!message.trim()) return;
-    else if (!socket.connection) {
+    else if (!socket.connected) {
       toast.error("Please login to connect with Agent")
        setMessage('')
       return
     }
+    
     const msg = {
       roomId,
       fromUserId: userId,
