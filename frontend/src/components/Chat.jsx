@@ -2,10 +2,10 @@ import React, { useEffect, useRef, useState } from "react";
 import axios from "axios";
 import io from "socket.io-client";
 import { jwtDecode } from "jwt-decode";
-
+import { toast } from "react-toastify"
 const socket = io("http://localhost:3001", {
   auth: {
-    token: localStorage.getItem("token"), //send jwt for auth verification
+    token : localStorage.getItem("token"), //send jwt for auth verification
   },
 });
 const backendUrl = import.meta.env.VITE_BACKEND_URL;
@@ -43,6 +43,8 @@ const Chat = () => {
 
   //recieve messages
   useEffect(() => {
+
+    // Listen messages from admin
     socket.on("receive-message-from-admin", ({ fromUserId, message }) => {
       setSelectedAdmin(fromUserId);
       setMessages((prev) => [...prev, { fromUserId: fromUserId, message }]);
@@ -114,6 +116,11 @@ const Chat = () => {
   //send message to admin
   const sendMessage = () => {
     if (!message.trim()) return;
+    else if (!socket.connection) {
+      toast.error("Please login to connect with Agent")
+       setMessage('')
+      return
+    }
     const msg = {
       roomId,
       fromUserId: userId,
@@ -135,7 +142,6 @@ const Chat = () => {
       }, 1000);
     }
   };
-  console.log("is typing", isTyping);
 
   return (
     <div>

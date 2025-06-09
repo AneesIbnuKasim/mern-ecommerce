@@ -43,7 +43,6 @@ const AdminChat = () => {
     axios
       .get(backendUrl + "/api/messages/users")
       .then((res) => {
-        console.log("users admin:", res.data.users);
         setUsers(res.data.users);
       })
       .catch((err) => {

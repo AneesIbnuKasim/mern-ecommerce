@@ -18,7 +18,7 @@ const setupSocket = (server) => {
   io.use((socket, next) => {
     const token = socket.handshake.auth?.token;
     if (!token)
-      return next(new Error("Authentciation Error: You are not logged in"));
+      return next(new Error("Authentciation Error: You are not logged in"))
     try {
       const user = jwt.verify(token, process.env.jwt_secret);
       socket.user = user;
